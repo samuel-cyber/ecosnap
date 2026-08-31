@@ -1,0 +1,16 @@
+// src/config/supabaseClient.js
+// One shared connection to Supabase, reused everywhere instead of
+// creating a new connection in every file that needs the database.
+
+const { createClient } = require('@supabase/supabase-js');
+
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('Missing SUPABASE_URL or SUPABASE_KEY in environment variables');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+module.exports = supabase;
