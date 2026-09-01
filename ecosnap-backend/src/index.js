@@ -6,6 +6,11 @@ require('dotenv').config(); // loads variables from .env into process.env
 const express = require('express');
 const cors = require('cors');
 
+const reportsRouter = require('./routes/reports');
+const leaderboardRouter = require('./routes/leaderboard');
+const usersRouter = require('./routes/users');
+const redeemRouter = require('./routes/redeem');
+
 const app = express(); // create the Express application — this IS our server, before it's "on"
 
 // --- middleware (code that runs on every request, before it reaches a route) ---
@@ -17,6 +22,11 @@ app.use(express.json());   // automatically parse incoming JSON request bodies i
 app.get('/ping', (req, res) => {
   res.json({ status: 'ok', message: 'EcoSnap backend is alive' });
 });
+
+app.use('/reports', reportsRouter);
+app.use('/leaderboard', leaderboardRouter);
+app.use('/users', usersRouter);
+app.use('/redeem', redeemRouter);
 
 // --- start the server ---
 const PORT = process.env.PORT || 3000;
@@ -31,4 +41,3 @@ if (require.main === module) {
 }
 
 module.exports = app;
-
