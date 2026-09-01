@@ -10,6 +10,7 @@ const reportsRouter = require('./routes/reports');
 const leaderboardRouter = require('./routes/leaderboard');
 const usersRouter = require('./routes/users');
 const redeemRouter = require('./routes/redeem');
+const errorHandler = require('./middleware/errorHandler');
 
 const app = express(); // create the Express application — this IS our server, before it's "on"
 
@@ -27,6 +28,10 @@ app.use('/reports', reportsRouter);
 app.use('/leaderboard', leaderboardRouter);
 app.use('/users', usersRouter);
 app.use('/redeem', redeemRouter);
+
+// Must be LAST — Express only treats a 4-argument function as an
+// error handler when it's registered after every other route/middleware.
+app.use(errorHandler);
 
 // --- start the server ---
 const PORT = process.env.PORT || 3000;
