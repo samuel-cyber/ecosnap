@@ -19,7 +19,7 @@ router.post("/", async (req, res, next) => {
       lng,
       ai_label,
       ai_confidence,
-    } = req.body;
+    } = req.body || {};
 
     // Basic validation
     if (

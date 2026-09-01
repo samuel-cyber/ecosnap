@@ -9,7 +9,7 @@ const router = express.Router();
  */
 router.post("/", async (req, res, next) => {
   try {
-    const { user_id, points_spent, reward_type } = req.body;
+    const { user_id, points_spent, reward_type } = req.body || {};
 
     // Basic validation
     if (!user_id || points_spent === undefined || !reward_type) {
