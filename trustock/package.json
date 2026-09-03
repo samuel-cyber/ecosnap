@@ -1,0 +1,27 @@
+{
+  "name": "trustock",
+  "version": "1.0.0",
+  "description": "Trusted group buying for young businesses. Pool your purchasing power, protect your transaction.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "migrate": "node scripts/migrate.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test tests/*.test.js",
+    "demo": "node scripts/demo.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Trustock — pool your purchasing power</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🛡️</text></svg>" />
+</head>
+<body>
+  <!-- Says, on every screen, whether money movement here is real. -->
+  <div id="mode-banner" class="mode-banner" hidden></div>
+
+  <header class="topbar" id="topbar" hidden>
+    <div class="topbar-inner">
+      <a class="brand" href="#/pools">
+        <span class="brand-mark">TS</span>
+        <span class="brand-text">Trustock<em>Pool together. Move money safely.</em></span>
+      </a>
+      <nav class="nav">
+        <a href="#/pools" data-nav="pools">Pools</a>
+        <a href="#/new" data-nav="new">Create pool</a>
+        <a href="#/history" data-nav="history">History</a>
+      </nav>
+      <div class="who">
+        <span id="who-name"></span>
+        <span id="who-role" class="pill pill-quiet"></span>
+        <button id="logout" class="btn btn-ghost btn-sm">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="view" class="view"></main>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
