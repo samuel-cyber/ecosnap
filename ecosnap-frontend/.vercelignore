@@ -1,0 +1,6 @@
+node_modules/
+mock-api/
+config.local.js
+config.local.example.js
+README.md
+*.log

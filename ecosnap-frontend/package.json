@@ -1,0 +1,9 @@
+{
+  "name": "ecosnap-frontend",
+  "private": true,
+  "description": "EcoSnap frontend — static, no bundler. The build step only generates config.generated.js from environment variables.",
+  "scripts": {
+    "build": "node scripts/build-config.js",
+    "dev": "node mock-api/server.js --seed"
+  }
+}

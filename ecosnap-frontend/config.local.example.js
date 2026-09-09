@@ -1,9 +1,13 @@
 /* config.local.example.js
  *
  * Copy this to config.local.js (gitignored) and fill in your own values.
- * Anything set here overrides the defaults in js/config.js.
+ * Anything set here overrides the defaults in js/config.js, and also wins over
+ * config.generated.js, so a local file always beats a deployed setting.
+ *
+ * For a deployment, do not use this file -- set ECOSNAP_* environment
+ * variables instead (see README, "Deploying").
  */
-window.ECOSNAP_CONFIG = {
+window.ECOSNAP_CONFIG = Object.assign({}, window.ECOSNAP_CONFIG, {
   // Backend. Use the deployed URL for a phone demo; localhost for dev.
   API_BASE_URL: 'http://localhost:3000',
   // API_BASE_URL: 'https://ecosnap-blue.vercel.app',
@@ -19,4 +23,4 @@ window.ECOSNAP_CONFIG = {
   // From the PM: Teachable Machine → Export → TensorFlow.js → Upload.
   // Paste the shared model URL (the folder, not model.json itself).
   TM_MODEL_URL: '',
-};
+});

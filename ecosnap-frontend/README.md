@@ -49,6 +49,57 @@ rather than something fake:
 - No Mapbox → the map screen lists the same reports it would have plotted.
 - No Storage → the photo isn't uploaded, and the UI says so plainly.
 
+## Deploying (Vercel)
+
+This repository holds three separate projects (`ecosnap-frontend`,
+`ecosnap-backend`, `trustock`) and nothing at its root. Vercel serves the
+**Root Directory** you point it at, so a project left pointing at the repo root
+finds no `index.html` and returns `404: NOT_FOUND`.
+
+**Vercel → Settings → General → Root Directory → `ecosnap-frontend`.**
+The backend is a separate Vercel project with its root set to
+`ecosnap-backend` (it has its own `vercel.json`).
+
+### Configuration comes from environment variables
+
+The app is static — there is no server at runtime to read `process.env` — so
+`scripts/build-config.js` runs at build time and writes `config.generated.js`
+from `ECOSNAP_*` variables. `vercel.json` already wires it up as the build
+command; nothing needs to be committed or hand-edited per environment.
+
+Set these in **Vercel → Settings → Environment Variables**:
+
+| Variable | Required | Value |
+|---|---|---|
+| `ECOSNAP_API_BASE_URL` | **yes** | The deployed backend, e.g. `https://ecosnap-backend.vercel.app` |
+| `ECOSNAP_SUPABASE_URL` | for login | Supabase → Settings → API |
+| `ECOSNAP_SUPABASE_ANON_KEY` | for login | The **anon/publishable** key — never the service_role key |
+| `ECOSNAP_SUPABASE_STORAGE_BUCKET` | no | Defaults to `reports` |
+| `ECOSNAP_MAPBOX_TOKEN` | for map pins | A **public** token (`pk.…`), scoped to your domain |
+| `ECOSNAP_TM_MODEL_URL` | for AI | The Teachable Machine model folder URL |
+
+Only variables that are actually set get written; the rest fall through to the
+defaults in `js/config.js` rather than being blanked out. Precedence is
+`config.local.js` > `config.generated.js` > `js/config.js` defaults, so a local
+file always beats a deployed setting and the dev workflow is unchanged.
+
+The build **fails loudly** rather than shipping something broken when:
+
+- `ECOSNAP_API_BASE_URL` is missing on a production deploy — otherwise the app
+  silently falls back to `localhost:3000` and every visitor sees "Can't reach
+  the backend".
+- A Supabase **service_role** (or `sb_secret_…`) key is passed as the anon key.
+  Everything written into `config.generated.js` is readable by anyone who opens
+  the page; a service_role key there hands every visitor full database access,
+  bypassing row-level security.
+- A **secret** Mapbox token (`sk.…`) is passed instead of a public one.
+
+To reproduce a deployment build locally:
+
+```bash
+ECOSNAP_API_BASE_URL=https://your-backend.vercel.app npm run build
+```
+
 ## Build order (report §1.3) — all 8 done
 
 | # | Step | Where |
@@ -88,27 +139,32 @@ a clear message instead of an opaque 400:
 - `category` must be exactly `burning` or `blocked_drain`
 - `ai_confidence` must be `0..1` — sending `91` instead of `0.91` is rejected
 
-### Two backend changes were required
+### Two endpoints the backend still needs
 
-`POST /users` **did not exist**, and nothing else created rows in the backend's
-`users` table. Supabase Auth stores accounts in `auth.users`, but every
-EcoPoint, report and redemption hangs off the backend's own `public.users`
-table, and `reports.user_id` has a foreign key onto it.
+The backend is **not modified by this work** — it is exactly as its author left
+it. Two gaps were found while wiring the frontend up, both written out with
+paste-ready code in [BACKEND-NEEDS.md](BACKEND-NEEDS.md):
 
-Without that row, a freshly signed-up user hit three failures: `POST /reports`
-violated the foreign key, and `GET /users/:id` and `POST /redeem` both 404'd.
-So `ecosnap-backend/src/routes/users.js` now has an idempotent `POST /users`,
-which the frontend calls once at login. This is exactly the kind of
-integration gap §2.6 warns about catching before demo day.
+**`POST /users` — required.** Supabase Auth stores accounts in `auth.users`,
+but every EcoPoint, report and redemption hangs off the backend's own
+`public.users` table, and `reports.user_id` has a foreign key onto it. Nothing
+creates that row, so against the real backend a freshly signed-up user hits
+three failures at once: `POST /reports` violates the foreign key, and
+`GET /users/:id` and `POST /redeem` both 404. In practice **sign-in cannot
+work** until this exists. The bundled mock server implements it, so local
+development and the demo are unaffected.
 
-**`GET /users/:id/reports`** was added for the same file. `GET /reports`
-returns only verified reports and omits `user_id`, so there was no way to show
-someone their own history. Without it, "My Impact" had to derive a report count
-from the points balance — which silently under-reported a user's work the
-moment they redeemed anything (earn 60 points across 6 reports, redeem 50, and
-the screen claimed 1 report). Counts now come from the reports themselves, and
-flagged ones are shown too, since flagged is a normal outcome rather than a
-failure.
+**`GET /users/:id/reports` — optional.** `GET /reports` returns only verified
+reports and omits `user_id`, so there is no way to show someone their own
+history. The frontend degrades cleanly when this is missing: My Impact still
+shows points, name and neighbourhood, and simply omits the report list and
+counts rather than guessing at them. The earlier approach — deriving a count
+from the points balance — was removed because it under-reported a user's work
+the moment they redeemed anything (earn 60 points across 6 reports, redeem 50,
+and the screen claimed 1 report).
+
+This is exactly the kind of integration gap §2.6 warns about catching before
+demo day.
 
 ## The three-class model
 

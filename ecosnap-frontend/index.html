@@ -20,7 +20,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.5/dist/teachablemachine-image.min.js"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
 
-  <!-- Optional, gitignored: overrides API/Supabase/Mapbox/model settings. -->
+  <!-- Written at build time from environment variables (scripts/build-config.js).
+       Absent during local development, which is why the load is optional. -->
+  <script src="config.generated.js" onerror="void 0"></script>
+  <!-- Optional, gitignored: local overrides, which win over the generated file. -->
   <script src="config.local.js" onerror="void 0"></script>
 </head>
 <body>

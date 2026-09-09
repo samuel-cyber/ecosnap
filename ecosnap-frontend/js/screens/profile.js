@@ -14,12 +14,8 @@ export async function show() {
   if (!cached) return;
 
   let user;
-  let reports;
   try {
-    [user, reports] = await Promise.all([
-      api.getUser(cached.id),
-      api.getUserReports(cached.id),
-    ]);
+    user = await api.getUser(cached.id);
   } catch (error) {
     errorState(error.message, 'Try again');
     const retry = $('#retry');
@@ -27,13 +23,28 @@ export async function show() {
     return;
   }
 
+  // GET /users/:id/reports is optional (see BACKEND-NEEDS.md). Where the
+  // backend doesn't serve it, the screen drops the history and the counts
+  // rather than guessing at them -- a wrong number here is worse than none,
+  // because deriving a count from the points balance makes redeeming look
+  // like it erased work already done.
+  let reports = null;
+  try {
+    reports = await api.getUserReports(cached.id);
+  } catch (error) {
+    if (error.status !== 404) throw error;
+  }
+
   const points = user.eco_points || 0;
-  const verified = reports.filter((r) => r.status === 'verified');
-  const flagged = reports.filter((r) => r.status === 'flagged');
+  const hasHistory = Array.isArray(reports);
+  const verified = hasHistory ? reports.filter((r) => r.status === 'verified') : [];
+  const flagged = hasHistory ? reports.filter((r) => r.status === 'flagged') : [];
 
   // Counted from the reports themselves, not derived from the points balance:
   // spending points must not appear to erase work already done.
-  const earned = reports.reduce((sum, r) => sum + (r.points_awarded || 0), 0);
+  const earned = hasHistory
+    ? reports.reduce((sum, r) => sum + (r.points_awarded || 0), 0)
+    : 0;
 
   render(`
     <div class="page-head">
@@ -47,18 +58,19 @@ export async function show() {
       <p class="small muted mt">${esc(user.display_name)}${user.neighborhood ? ` · ${esc(user.neighborhood)}` : ''}</p>
     </div>
 
-    <div class="stat-grid mt">
-      <div class="stat">
-        <div class="stat-value">${verified.length}</div>
-        <div class="stat-label">Verified report${verified.length === 1 ? '' : 's'}</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">${earned.toLocaleString()}</div>
-        <div class="stat-label">Points earned all time</div>
-      </div>
-    </div>
+    ${!hasHistory ? '' : `
+      <div class="stat-grid mt">
+        <div class="stat">
+          <div class="stat-value">${verified.length}</div>
+          <div class="stat-label">Verified report${verified.length === 1 ? '' : 's'}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${earned.toLocaleString()}</div>
+          <div class="stat-label">Points earned all time</div>
+        </div>
+      </div>`}
 
-    ${reports.length === 0 ? `
+    ${!hasHistory ? '' : reports.length === 0 ? `
       <div class="card state mt">
         <div class="state-icon">🌱</div>
         <h2>No reports yet</h2>

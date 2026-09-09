@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node scripts/build-config.js",
+  "outputDirectory": ".",
+  "framework": null,
+  "headers": [
+    {
+      "source": "/config.generated.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
+    }
+  ]
+}
