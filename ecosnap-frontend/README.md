@@ -76,6 +76,7 @@ report §1.1:
 | GET | `/ping` | Startup check — fails loudly with the URL it tried |
 | POST | `/users` | After login, to create the app profile **(see below)** |
 | GET | `/users/:id` | Profile, redeem, points chip |
+| GET | `/users/:id/reports` | My Impact — the user's own report history |
 | POST | `/reports` | Submitting a report |
 | GET | `/reports` | Map, incl. `?minLat=&maxLat=&minLng=&maxLng=` on pan |
 | GET | `/leaderboard` | Leaderboard |
@@ -87,7 +88,7 @@ a clear message instead of an opaque 400:
 - `category` must be exactly `burning` or `blocked_drain`
 - `ai_confidence` must be `0..1` — sending `91` instead of `0.91` is rejected
 
-### One backend change was required
+### Two backend changes were required
 
 `POST /users` **did not exist**, and nothing else created rows in the backend's
 `users` table. Supabase Auth stores accounts in `auth.users`, but every
@@ -99,6 +100,15 @@ violated the foreign key, and `GET /users/:id` and `POST /redeem` both 404'd.
 So `ecosnap-backend/src/routes/users.js` now has an idempotent `POST /users`,
 which the frontend calls once at login. This is exactly the kind of
 integration gap §2.6 warns about catching before demo day.
+
+**`GET /users/:id/reports`** was added for the same file. `GET /reports`
+returns only verified reports and omits `user_id`, so there was no way to show
+someone their own history. Without it, "My Impact" had to derive a report count
+from the points balance — which silently under-reported a user's work the
+moment they redeemed anything (earn 60 points across 6 reports, redeem 50, and
+the screen claimed 1 report). Counts now come from the reports themselves, and
+flagged ones are shown too, since flagged is a normal outcome rather than a
+failure.
 
 ## The three-class model
 
@@ -124,4 +134,17 @@ The PM's model has **three** classes (`burning`, `blocked_drain`, and a
   validation, same 0.75 threshold, same 1-hour/50m duplicate window, same
   neighborhood boxes). The real backend is the source of truth; if they
   disagree, the mock is wrong.
-- Mapbox's WebGL context is released when navigating away from the map.
+- Mapbox's WebGL context is released when navigating away from the map, and
+  captured-photo object URLs are revoked rather than leaking for the life of
+  the page.
+
+## What could not be verified here
+
+No Supabase, Mapbox or Teachable Machine credentials were available in the
+build environment, and the CDNs were unreachable from it, so these paths are
+written to the documented contracts but have **not** been run end to end:
+magic-link email sign-in, Supabase Storage upload, live Mapbox tile rendering,
+and real model inference. Everything else — the full report → points →
+leaderboard → redeem flow, the flagged path, session persistence and the
+backend-unreachable state — was driven in a real browser against the mock.
+Worth an end-to-end pass once the keys and the model land, per §2.6.

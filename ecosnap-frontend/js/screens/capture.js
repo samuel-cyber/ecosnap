@@ -17,7 +17,13 @@ import {
 // Everything the current capture knows about itself.
 let draft = null;
 
+/** Object URLs are held by the page until revoked; drop the previous one. */
+function releaseDraft() {
+  if (draft && draft.objectUrl) URL.revokeObjectURL(draft.objectUrl);
+}
+
 export function show() {
+  releaseDraft();
   draft = null;
   render(`
     <div class="page-head">
@@ -49,6 +55,7 @@ export function show() {
 
 /** Renders the "Analyzing…" state, then runs inference on the loaded image. */
 async function analyze(file) {
+  releaseDraft();
   const objectUrl = URL.createObjectURL(file);
 
   render(`
@@ -189,7 +196,7 @@ function showReview(result) {
   const retake = $('#retake');
   if (retake) retake.onclick = show;
 
-  view_bindCategoryButtons();
+  bindCategoryButtons();
 
   const submit = $('#submit');
   if (submit) {
@@ -200,7 +207,7 @@ function showReview(result) {
   }
 }
 
-function view_bindCategoryButtons() {
+function bindCategoryButtons() {
   document.querySelectorAll('.cat-btn').forEach((button) => {
     button.onclick = () => {
       document.querySelectorAll('.cat-btn').forEach((b) => b.classList.remove('selected'));

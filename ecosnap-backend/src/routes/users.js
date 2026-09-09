@@ -72,6 +72,41 @@ router.post("/", async (req, res, next) => {
 });
 
 /**
+ * GET /users/:id/reports
+ * A user's own reports, newest first.
+ *
+ * GET /reports deliberately exposes only verified reports and omits user_id,
+ * so there was no way for someone to see their own contribution history --
+ * including the flagged ones, which matter precisely because "flagged" is a
+ * normal outcome rather than a failure.
+ */
+router.get("/:id/reports", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!uuidPattern.test(id)) {
+      return res.status(400).json({
+        error: "Invalid user id format",
+      });
+    }
+
+    const { data, error } = await supabase
+      .from("reports")
+      .select("id, category, status, points_awarded, neighborhood, lat, lng, created_at")
+      .eq("user_id", id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch reports: ${error.message}`);
+    }
+
+    return res.json(data);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * GET /users/:id
  * Get basic information about a user.
  */

@@ -2,7 +2,10 @@
 
 import * as api from '../api.js';
 import * as auth from '../auth.js';
-import { render, loading, errorState, $, esc, toast } from '../ui.js';
+import {
+  render, loading, errorState, $, esc, toast, relativeTime,
+  CATEGORY_LABELS, CATEGORY_ICONS,
+} from '../ui.js';
 
 export async function show() {
   loading('Loading your impact…');
@@ -11,8 +14,12 @@ export async function show() {
   if (!cached) return;
 
   let user;
+  let reports;
   try {
-    user = await api.getUser(cached.id);
+    [user, reports] = await Promise.all([
+      api.getUser(cached.id),
+      api.getUserReports(cached.id),
+    ]);
   } catch (error) {
     errorState(error.message, 'Try again');
     const retry = $('#retry');
@@ -20,11 +27,13 @@ export async function show() {
     return;
   }
 
-  // The backend's GET /reports only returns verified reports without an owner
-  // filter, so "my reports" is derived client-side from what's visible. It is
-  // labelled as verified-only so the number isn't mistaken for a total.
   const points = user.eco_points || 0;
-  const verifiedReports = Math.floor(points / 10);
+  const verified = reports.filter((r) => r.status === 'verified');
+  const flagged = reports.filter((r) => r.status === 'flagged');
+
+  // Counted from the reports themselves, not derived from the points balance:
+  // spending points must not appear to erase work already done.
+  const earned = reports.reduce((sum, r) => sum + (r.points_awarded || 0), 0);
 
   render(`
     <div class="page-head">
@@ -34,20 +43,54 @@ export async function show() {
 
     <div class="card center">
       <div class="stat-value" style="font-size:44px;color:var(--green)">${points.toLocaleString()}</div>
-      <div class="stat-label">EcoPoints</div>
+      <div class="stat-label">EcoPoints available</div>
       <p class="small muted mt">${esc(user.display_name)}${user.neighborhood ? ` · ${esc(user.neighborhood)}` : ''}</p>
     </div>
 
     <div class="stat-grid mt">
       <div class="stat">
-        <div class="stat-value">${verifiedReports}</div>
-        <div class="stat-label">Verified reports</div>
+        <div class="stat-value">${verified.length}</div>
+        <div class="stat-label">Verified report${verified.length === 1 ? '' : 's'}</div>
       </div>
       <div class="stat">
-        <div class="stat-value">${Math.floor(points / 50)}</div>
-        <div class="stat-label">Rewards affordable</div>
+        <div class="stat-value">${earned.toLocaleString()}</div>
+        <div class="stat-label">Points earned all time</div>
       </div>
     </div>
+
+    ${reports.length === 0 ? `
+      <div class="card state mt">
+        <div class="state-icon">🌱</div>
+        <h2>No reports yet</h2>
+        <p>Your first verified report earns 10 EcoPoints.</p>
+        <a class="btn btn-primary" href="#/capture">Report a hazard</a>
+      </div>` : `
+      <div class="card mt">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h3>Your reports</h3>
+          <span class="small muted">${reports.length} total</span>
+        </div>
+        ${flagged.length ? `
+          <p class="hint mt">
+            ${flagged.length} ${flagged.length === 1 ? 'is' : 'are'} still being double-checked —
+            low confidence or a possible duplicate. They earn no points, but they still help.
+          </p>` : ''}
+        <div class="mt">
+          ${reports.slice(0, 12).map((r) => `
+            <div class="rank">
+              <span class="rank-pos">${CATEGORY_ICONS[r.category] || '📍'}</span>
+              <span class="rank-name">
+                ${esc(CATEGORY_LABELS[r.category] || r.category)}
+                <div class="small muted">
+                  ${esc(r.neighborhood || 'Unknown')} · ${esc(relativeTime(r.created_at))}
+                </div>
+              </span>
+              <span class="pill ${r.status === 'verified' ? 'pill-green' : 'pill-warn'}">
+                ${r.status === 'verified' ? `+${r.points_awarded}` : 'checking'}
+              </span>
+            </div>`).join('')}
+        </div>
+      </div>`}
 
     <div class="card mt">
       <h3>How points work</h3>

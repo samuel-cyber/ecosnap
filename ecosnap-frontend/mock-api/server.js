@@ -83,8 +83,11 @@ function serveStatic(req, res, pathname) {
   const rel = pathname === '/' ? '/index.html' : pathname;
   const file = path.join(ROOT, rel);
 
-  // Never serve outside the project directory.
-  if (!file.startsWith(ROOT)) return send(res, 403, { error: 'Forbidden' });
+  // Never serve outside the project directory. The separator matters: a bare
+  // prefix check would also accept a sibling directory like "<ROOT>-backup".
+  if (file !== ROOT && !file.startsWith(ROOT + path.sep)) {
+    return send(res, 403, { error: 'Forbidden' });
+  }
 
   fs.readFile(file, (error, content) => {
     if (error) {
@@ -121,6 +124,20 @@ async function api(req, res, pathname, query) {
     const user = { id, display_name, neighborhood: neighborhood || null, eco_points: 0 };
     db.users.push(user);
     return send(res, 201, user);
+  }
+
+  // GET /users/:id/reports
+  if (/^\/users\/[^/]+\/reports$/.test(pathname) && method === 'GET') {
+    const id = pathname.split('/')[2];
+    if (!UUID_RE.test(id)) return send(res, 400, { error: 'Invalid user id format' });
+
+    return send(res, 200,
+      db.reports
+        .filter((r) => r.user_id === id)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+        .map(({ id, category, status, points_awarded, neighborhood, lat, lng, created_at }) =>
+          ({ id, category, status, points_awarded, neighborhood, lat, lng, created_at }))
+    );
   }
 
   // GET /users/:id

@@ -74,6 +74,9 @@ export const createUser = ({ id, displayName, neighborhood }) =>
 /** GET /users/:id — profile + points. 400 on bad uuid, 404 if absent. */
 export const getUser = (id) => request(`/users/${id}`);
 
+/** GET /users/:id/reports — this user's own reports, verified and flagged. */
+export const getUserReports = (id) => request(`/users/${id}/reports`);
+
 /**
  * POST /reports — submit a report.
  *
