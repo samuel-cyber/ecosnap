@@ -2,7 +2,8 @@
 
 import { config, hasMapbox } from '../config.js';
 import * as api from '../api.js';
-import { render, $, toast, esc, CATEGORY_LABELS, CATEGORY_ICONS, relativeTime } from '../ui.js';
+import { icon } from '../icons.js';
+import { render, $, toast, esc, CATEGORY_LABELS, categoryIcon, relativeTime } from '../ui.js';
 
 let map = null;
 let markers = [];
@@ -43,10 +44,14 @@ export async function show() {
 
 /** Mapbox needs a token; without one we still show the data as a list. */
 function showFallback(reports) {
+  // Without a token the shell is not holding a map, so it must stop behaving
+  // like one -- its fixed height and overflow were clipping the list below.
+  document.querySelector('.map-shell').classList.add('is-list');
+
   $('#map').innerHTML = `
     <div class="map-fallback">
       <div>
-        <div class="state-icon">🗺️</div>
+        <div class="state-icon">${icon('map', { size: 30 })}</div>
         <h2>Map needs a Mapbox token</h2>
         <p class="small muted mt">
           Add <code>MAPBOX_TOKEN</code> to <code>config.local.js</code> to plot pins.
@@ -62,14 +67,16 @@ function showFallback(reports) {
     .slice(0, 30)
     .map((r) => `
       <div class="rank">
-        <span class="rank-pos">${CATEGORY_ICONS[r.category] || '📍'}</span>
+        <span class="rank-pos">${categoryIcon(r.category)}</span>
         <span class="rank-name">${esc(CATEGORY_LABELS[r.category] || r.category)}
-          <div class="small muted">${r.lat.toFixed(4)}, ${r.lng.toFixed(4)} · ${esc(relativeTime(r.created_at))}</div>
+          <div class="small muted">${esc(relativeTime(r.created_at))} · ${r.lat.toFixed(4)}, ${r.lng.toFixed(4)}</div>
         </span>
       </div>`)
     .join('');
 
-  $('#map').insertAdjacentHTML('afterend', `<div class="card mt">${list}</div>`);
+  // After the shell, not after #map -- inside the shell it would be clipped.
+  document.querySelector('.map-shell')
+    .insertAdjacentHTML('afterend', `<div class="card mt">${list}</div>`);
 }
 
 function renderMap(reports) {
@@ -125,7 +132,7 @@ function plot(reports) {
   for (const report of reports) {
     const el = document.createElement('div');
     el.className = `marker ${report.category}`;
-    el.textContent = CATEGORY_ICONS[report.category] || '';
+    el.innerHTML = categoryIcon(report.category, 16);
 
     const popup = new window.mapboxgl.Popup({ offset: 16 }).setHTML(`
       <div style="color:#111">

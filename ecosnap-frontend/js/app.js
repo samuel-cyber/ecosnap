@@ -1,5 +1,7 @@
 /* app.js — boots the app, guards routes behind sign-in, and routes by hash. */
 
+import { icon } from './icons.js';
+
 import { config, hasSupabase, hasMapbox, hasModel } from './config.js';
 import * as api from './api.js';
 import * as auth from './auth.js';
@@ -52,7 +54,12 @@ function updatePoints() {
 
 function setActiveTab(name) {
   document.querySelectorAll('[data-tab]').forEach((tab) => {
-    tab.classList.toggle('active', tab.dataset.tab === name);
+    const current = tab.dataset.tab === name;
+    tab.classList.toggle('active', current);
+    // aria-current is what screen readers announce and what the stylesheet
+    // targets, so the visual and announced states cannot drift apart.
+    if (current) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
   });
 }
 
@@ -100,7 +107,7 @@ async function boot() {
   } catch (error) {
     document.getElementById('view').innerHTML = `
       <div class="state">
-        <div class="state-icon">🔌</div>
+        <div class="state-icon">${icon('offline', { size: 30 })}</div>
         <h2>Can't reach the backend</h2>
         <p>${esc(error.message)}</p>
         <p class="small mt">Currently pointing at <code>${esc(config.API_BASE_URL)}</code>.</p>

@@ -139,32 +139,15 @@ a clear message instead of an opaque 400:
 - `category` must be exactly `burning` or `blocked_drain`
 - `ai_confidence` must be `0..1` — sending `91` instead of `0.91` is rejected
 
-### Two endpoints the backend still needs
+### The backend is untouched by this work
 
-The backend is **not modified by this work** — it is exactly as its author left
-it. Two gaps were found while wiring the frontend up, both written out with
-paste-ready code in [BACKEND-NEEDS.md](BACKEND-NEEDS.md):
+`ecosnap-backend/` is byte-identical to `main`. Everything the frontend needs
+is already there.
 
-**`POST /users` — required.** Supabase Auth stores accounts in `auth.users`,
-but every EcoPoint, report and redemption hangs off the backend's own
-`public.users` table, and `reports.user_id` has a foreign key onto it. Nothing
-creates that row, so against the real backend a freshly signed-up user hits
-three failures at once: `POST /reports` violates the foreign key, and
-`GET /users/:id` and `POST /redeem` both 404. In practice **sign-in cannot
-work** until this exists. The bundled mock server implements it, so local
-development and the demo are unaffected.
-
-**`GET /users/:id/reports` — optional.** `GET /reports` returns only verified
-reports and omits `user_id`, so there is no way to show someone their own
-history. The frontend degrades cleanly when this is missing: My Impact still
-shows points, name and neighbourhood, and simply omits the report list and
-counts rather than guessing at them. The earlier approach — deriving a count
-from the points balance — was removed because it under-reported a user's work
-the moment they redeemed anything (earn 60 points across 6 reports, redeem 50,
-and the screen claimed 1 report).
-
-This is exactly the kind of integration gap §2.6 warns about catching before
-demo day.
+Building against it did surface real problems, including two that let anyone
+award themselves unlimited EcoPoints. They are written up for whoever owns
+that service in [BACKEND-ISSUES.md](BACKEND-ISSUES.md) — nothing has been
+changed on their behalf.
 
 ## The three-class model
 

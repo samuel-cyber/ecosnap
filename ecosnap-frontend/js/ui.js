@@ -1,5 +1,7 @@
 /* ui.js — small shared helpers used by every screen. */
 
+import { icon } from './icons.js';
+
 /** Escapes anything from the API or a user before it reaches innerHTML. */
 export function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (c) =>
@@ -22,7 +24,7 @@ export function loading(message = 'Loading…') {
 export function errorState(message, retryLabel) {
   render(`
     <div class="state">
-      <div class="state-icon">⚠️</div>
+      <div class="state-icon">${icon('alert', { size: 30 })}</div>
       <h2>Something went wrong</h2>
       <p>${esc(message)}</p>
       ${retryLabel ? `<button class="btn btn-primary" id="retry">${esc(retryLabel)}</button>` : ''}
@@ -66,9 +68,14 @@ export const CATEGORY_LABELS = {
   blocked_drain: 'Blocked drain',
 };
 
-export const CATEGORY_ICONS = {
-  burning: '🔥',
-  blocked_drain: '🌊',
+/**
+ * Category mark at an explicit size, wrapped so it carries the category's own
+ * colour. The hue is the encoding -- a reader should be able to tell burning
+ * from water down a list without reading the label.
+ */
+export const categoryIcon = (category, size = 20) => {
+  const name = category === 'burning' ? 'flame' : category === 'blocked_drain' ? 'drain' : 'pin';
+  return `<span class="cat cat-${category || 'unknown'}">${icon(name, { size })}</span>`;
 };
 
 /**

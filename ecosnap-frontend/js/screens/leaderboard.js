@@ -1,6 +1,7 @@
 /* screens/leaderboard.js — report section 1.3 step 6. */
 
 import * as api from '../api.js';
+import { icon } from '../icons.js';
 import * as auth from '../auth.js';
 import { render, loading, errorState, $, esc } from '../ui.js';
 
@@ -31,7 +32,7 @@ export async function show() {
 
     ${rows.length === 0 ? `
       <div class="card state">
-        <div class="state-icon">🏆</div>
+        <div class="state-icon">${icon('ranking', { size: 30 })}</div>
         <h2>Nobody on the board yet</h2>
         <p>Submit the first verified report and put your neighborhood in first place.</p>
         <a class="btn btn-primary" href="#/capture">Report a hazard</a>
