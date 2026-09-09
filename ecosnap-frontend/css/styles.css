@@ -427,12 +427,11 @@ select {
 .state .btn { margin-top: 16px; }
 
 .notice {
-  display: flex; gap: 10px; align-items: flex-start;
+  display: block;
   padding: 12px 14px; border-radius: var(--r);
   background: var(--pending-wash); border: 1px solid color-mix(in srgb, var(--pending) 22%, transparent);
   color: #6b4600; font-size: .875rem;
 }
-.notice .ico { flex: none; color: var(--pending); }
 
 .setup-banner {
   padding: 8px 14px; text-align: center;
@@ -444,7 +443,10 @@ select {
 
 /* --- Auth ---------------------------------------------------------------- */
 .auth-wrap { min-height: 100dvh; display: grid; place-items: center; padding: 24px 16px; }
-.auth { width: 100%; max-width: 380px; }
+.auth { width: 100%; max-width: 380px; min-width: 0; }
+/* Grid and flex children default to min-width:auto, so an unbreakable token
+   (SUPABASE_ANON_KEY) would otherwise set a floor wider than the phone. */
+code { overflow-wrap: anywhere; }
 .auth-hero { text-align: center; margin-bottom: 22px; }
 .auth-hero .globe { display: grid; place-items: center; color: var(--brand); margin: 0 auto 12px; }
 .auth-hero h1 { font-size: 1.75rem; }
