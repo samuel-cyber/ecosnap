@@ -6,14 +6,15 @@
  */
 
 import * as api from '../api.js';
+import { icon } from '../icons.js';
 import * as auth from '../auth.js';
 import { render, loading, errorState, $, esc, toast, withBusy } from '../ui.js';
 
 const REWARDS = [
-  { icon: '📶', name: '100MB Data', cost: 50 },
-  { icon: '📞', name: '₦200 Airtime', cost: 100 },
-  { icon: '🎟️', name: 'Eco Voucher', cost: 150 },
-  { icon: '👕', name: 'EcoSnap T-shirt', cost: 500 },
+  { icon: 'signal', name: '100MB Data', cost: 50 },
+  { icon: 'phone', name: '₦200 Airtime', cost: 100 },
+  { icon: 'ticket', name: 'Eco Voucher', cost: 150 },
+  { icon: 'shirt', name: 'EcoSnap T-shirt', cost: 500 },
 ];
 
 export async function show() {
@@ -37,7 +38,7 @@ export async function show() {
   render(`
     <div class="page-head">
       <h1>Rewards</h1>
-      <p>You have <b style="color:var(--green)">${points.toLocaleString()}</b> EcoPoints to spend.</p>
+      <p>You have <b class="accent">${points.toLocaleString()}</b> EcoPoints to spend.</p>
     </div>
 
     <div class="notice info">
@@ -50,7 +51,7 @@ export async function show() {
         const affordable = points >= reward.cost;
         return `
           <div class="reward">
-            <span class="reward-ico">${reward.icon}</span>
+            <span class="reward-ico">${icon(reward.icon)}</span>
             <span class="reward-info">
               <span class="reward-name">${esc(reward.name)}</span>
               <span class="reward-cost">${reward.cost} points</span>
@@ -81,7 +82,7 @@ export async function show() {
 function showSuccess(rewardName) {
   render(`
     <div class="result verified">
-      <div class="badge">🎁</div>
+      <div class="state-icon">${icon('check', { size: 32 })}</div>
       <h1>Reward Sent</h1>
       <p>Your <b>${esc(rewardName)}</b> is on its way — simulated for this MVP, but your points
          have genuinely been deducted.</p>

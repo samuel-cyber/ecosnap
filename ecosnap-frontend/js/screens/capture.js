@@ -7,11 +7,12 @@
 
 import { config, hasModel } from '../config.js';
 import * as api from '../api.js';
+import { icon } from '../icons.js';
 import * as auth from '../auth.js';
 import * as classifier from '../classifier.js';
 import { uploadPhoto } from '../storage.js';
 import {
-  render, $, toast, withBusy, esc, getPosition, CATEGORY_LABELS, CATEGORY_ICONS,
+  render, $, toast, withBusy, esc, getPosition, CATEGORY_LABELS, categoryIcon,
 } from '../ui.js';
 
 // Everything the current capture knows about itself.
@@ -32,7 +33,7 @@ export function show() {
     </div>
 
     <label class="capture-drop" for="photo">
-      <div class="big">📷</div>
+      ${icon('camera', { size: 34 })}
       <h2>Take a photo</h2>
       <p>Get close enough that the problem fills most of the frame.</p>
     </label>
@@ -40,9 +41,15 @@ export function show() {
 
     <div class="card mt">
       <h3>What counts as a report?</h3>
-      <div class="prediction mt">
-        <div class="pred-row"><span>🔥 Burning trash — open waste fires, smoke</span></div>
-        <div class="pred-row"><span>🌊 Blocked drain — clogged gutters, standing water</span></div>
+      <div class="mt">
+        <div class="hazard-row" data-cat="burning">
+          ${categoryIcon('burning')}
+          <span><b>Burning trash</b> — open waste fires, smoke</span>
+        </div>
+        <div class="hazard-row" data-cat="blocked_drain">
+          ${categoryIcon('blocked_drain')}
+          <span><b>Blocked drain</b> — clogged gutters, standing water</span>
+        </div>
       </div>
       <p class="hint mt">Anything else will be rejected before it's submitted.</p>
     </div>`);
@@ -136,7 +143,7 @@ function showReview(result) {
     body = `
       <div class="card">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-          <h2>${CATEGORY_ICONS[draft.category]} ${esc(CATEGORY_LABELS[draft.category])}</h2>
+          <h2>${categoryIcon(draft.category, 22)} ${esc(CATEGORY_LABELS[draft.category])}</h2>
           <span class="pill ${lowConfidence ? 'pill-warn' : 'pill-green'}">
             ${(result.confidence * 100).toFixed(0)}% confident
           </span>
@@ -162,7 +169,7 @@ function showReview(result) {
         <div class="category-pick mt">
           ${['burning', 'blocked_drain'].map((c) => `
             <button class="cat-btn" data-cat="${c}">
-              <span class="ico">${CATEGORY_ICONS[c]}</span>${esc(CATEGORY_LABELS[c])}
+              ${categoryIcon(c, 22)}${esc(CATEGORY_LABELS[c])}
             </button>`).join('')}
         </div>
       </div>`;
@@ -181,8 +188,8 @@ function showReview(result) {
         <h3>Location</h3>
         <p class="small muted mt">
           ${place
-            ? `📍 ${esc(place)}`
-            : '⚠️ Location unavailable. EcoSnap needs it to place your report on the map — allow location access and take the photo again.'}
+            ? `${icon('pin', { size: 15 })} ${esc(place)}`
+            : `${icon('alert', { size: 15 })} Location unavailable. EcoSnap needs it to place your report on the map — allow location access and take the photo again.`}
         </p>
       </div>
 
@@ -251,10 +258,13 @@ function showResult(report) {
 
   render(`
     <div class="result ${verified ? 'verified' : 'flagged'}">
-      <div class="badge">${verified ? '🎉' : '🔍'}</div>
+      <div class="state-icon">${verified ? icon('check', { size: 32 }) : icon('clock', { size: 32 })}</div>
       <h1>${verified ? 'Report verified!' : "Thanks — we're double-checking this one"}</h1>
       ${verified
-        ? `<div class="points-pop">+${report.points_awarded} EcoPoints</div>
+        ? `<div class="points-pop">
+             <span class="points-pop-n">+${report.points_awarded}</span>
+             <span class="points-pop-u">EcoPoints</span>
+           </div>
            <p>Your report is live on the map${report.neighborhood && report.neighborhood !== 'Unknown'
               ? ` and counted toward <b>${esc(report.neighborhood)}</b>` : ''}.</p>`
         : `<p>This one needs a second look — either the photo wasn't clear enough to classify

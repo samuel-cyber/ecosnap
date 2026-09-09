@@ -2,6 +2,7 @@
 
 import { hasSupabase } from '../config.js';
 import * as auth from '../auth.js';
+import { icon } from '../icons.js';
 import { render, $, toast, withBusy, esc } from '../ui.js';
 
 const NEIGHBORHOODS = ['Yaba', 'Surulere', 'Ikeja'];
@@ -11,7 +12,7 @@ export function show(onSignedIn) {
     <div class="auth-wrap">
       <div class="auth">
         <div class="auth-hero">
-          <div class="globe">🌍</div>
+          <div class="globe">${icon('logo', { size: 40 })}</div>
           <h1>EcoSnap</h1>
           <p>Snap burning trash or a blocked drain. Earn EcoPoints. Put your neighborhood on the map.</p>
         </div>

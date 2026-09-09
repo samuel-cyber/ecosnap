@@ -1,10 +1,11 @@
 /* screens/profile.js — report section 1.3 step 7 ("My Impact"). */
 
 import * as api from '../api.js';
+import { icon } from '../icons.js';
 import * as auth from '../auth.js';
 import {
   render, loading, errorState, $, esc, toast, relativeTime,
-  CATEGORY_LABELS, CATEGORY_ICONS,
+  CATEGORY_LABELS, categoryIcon,
 } from '../ui.js';
 
 export async function show() {
@@ -53,7 +54,7 @@ export async function show() {
     </div>
 
     <div class="card center">
-      <div class="stat-value" style="font-size:44px;color:var(--green)">${points.toLocaleString()}</div>
+      <div class="balance">${points.toLocaleString()}</div>
       <div class="stat-label">EcoPoints available</div>
       <p class="small muted mt">${esc(user.display_name)}${user.neighborhood ? ` · ${esc(user.neighborhood)}` : ''}</p>
     </div>
@@ -72,7 +73,7 @@ export async function show() {
 
     ${!hasHistory ? '' : reports.length === 0 ? `
       <div class="card state mt">
-        <div class="state-icon">🌱</div>
+        <div class="state-icon">${icon('impact', { size: 30 })}</div>
         <h2>No reports yet</h2>
         <p>Your first verified report earns 10 EcoPoints.</p>
         <a class="btn btn-primary" href="#/capture">Report a hazard</a>
@@ -90,7 +91,7 @@ export async function show() {
         <div class="mt">
           ${reports.slice(0, 12).map((r) => `
             <div class="rank">
-              <span class="rank-pos">${CATEGORY_ICONS[r.category] || '📍'}</span>
+              <span class="rank-pos">${categoryIcon(r.category)}</span>
               <span class="rank-name">
                 ${esc(CATEGORY_LABELS[r.category] || r.category)}
                 <div class="small muted">
