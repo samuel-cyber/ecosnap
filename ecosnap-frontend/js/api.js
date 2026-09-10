@@ -16,14 +16,35 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Supplies the signed-in user's access token, if there is one.
+ *
+ * auth.js registers this rather than being imported here, because auth.js
+ * already imports this module and the cycle would be worse than the seam.
+ */
+let tokenProvider = async () => null;
+export function setTokenProvider(fn) {
+  tokenProvider = fn;
+}
+
 async function request(path, { method = 'GET', body } = {}) {
   const url = `${config.API_BASE_URL.replace(/\/$/, '')}${path}`;
+
+  // Sent from the day the frontend has a token, whether or not the backend
+  // reads it yet: a backend that ignores the header is unaffected, so this
+  // side can land first and requireAuth can follow whenever it is ready.
+  // Reversing that order would 401 every user the moment the backend deploys.
+  const token = await tokenProvider();
+
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
 
   let response;
   try {
     response = await fetch(url, {
       method,
-      headers: body ? { 'Content-Type': 'application/json' } : undefined,
+      headers: Object.keys(headers).length ? headers : undefined,
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch (networkError) {
