@@ -23,10 +23,12 @@ const defaults = {
   // Mapbox GL JS access token for the map screen.
   MAPBOX_TOKEN: '',
 
-  // Teachable Machine model exported by the PM (section 2.2 of the report).
-  // Point this at the folder containing model.json + metadata.json, e.g.
-  // https://teachablemachine.withgoogle.com/models/AbC123xyz/
-  TM_MODEL_URL: '',
+  // Teachable Machine model. The trained export ships with the app under
+  // /model, so classification works with nothing configured and does not
+  // depend on Teachable Machine's hosting staying up mid-demo. Override with
+  // a hosted folder (holding model.json + metadata.json) to swap in a
+  // retrained model without redeploying.
+  TM_MODEL_URL: '/model',
 
   // Backend awards points at >= 0.75 confidence. Mirrored here purely so the
   // UI can warn "this may come back flagged" before the user submits -- the
@@ -35,6 +37,15 @@ const defaults = {
 
   // Fallback map centre: Yaba, Lagos (matches the backend's geoService bounds).
   DEFAULT_CENTER: { lat: 6.5095, lng: 3.3711 },
+
+  // Approximate centres for the neighborhoods the sign-up screen offers. Used
+  // only when the device refuses a GPS fix, so a report can still be filed
+  // rather than the whole flow dead-ending -- the UI labels it as approximate.
+  NEIGHBORHOOD_CENTERS: {
+    Yaba: { lat: 6.5095, lng: 3.3711 },
+    Surulere: { lat: 6.4926, lng: 3.3543 },
+    Ikeja: { lat: 6.6018, lng: 3.3515 },
+  },
 };
 
 const overrides =

@@ -117,11 +117,60 @@ function predictionRows(result) {
     .join('');
 }
 
+/**
+ * Location, and a way out when there isn't one. A denied or unavailable GPS
+ * fix used to disable Submit permanently, which dead-ends the only flow the
+ * app has -- on desktop, over plain http, or after one accidental "Block",
+ * the hazard simply could not be reported. Falling back to the neighborhood
+ * centre keeps the report filable, and says plainly that it is approximate.
+ */
+function locationCard() {
+  if (draft.position) {
+    const place = `${draft.position.lat.toFixed(4)}, ${draft.position.lng.toFixed(4)}`;
+    return `
+      <div class="card mt">
+        <h3>Location</h3>
+        <p class="small muted mt">${icon('pin', { size: 15 })} ${esc(place)}</p>
+        ${draft.approxLabel ? `
+          <p class="hint mt">
+            Approximate — the centre of ${esc(draft.approxLabel)}, because your device
+            didn't share a GPS fix.
+          </p>` : ''}
+      </div>`;
+  }
+
+  return `
+    <div class="card mt">
+      <h3>Location</h3>
+      <p class="small muted mt">
+        ${icon('alert', { size: 15 })} Your device didn't share a location.
+      </p>
+      <div class="actions mt">
+        <button class="btn btn-quiet" id="geo-retry">Try again</button>
+        <button class="btn btn-quiet" id="geo-approx">Use ${esc(fallbackArea())} centre</button>
+      </div>
+      <p class="hint mt">
+        A GPS fix pins the report exactly where you're standing. The neighborhood centre
+        is approximate, but the report still counts toward ${esc(fallbackArea())}.
+      </p>
+    </div>`;
+}
+
+/** The signed-in user's neighborhood when we have a centre for it, else Yaba. */
+function fallbackArea() {
+  const hood = (auth.getUser() || {}).neighborhood;
+  return hood && config.NEIGHBORHOOD_CENTERS[hood] ? hood : 'Yaba';
+}
+
 /** The confirm-before-submit screen. */
 function showReview(result) {
-  const irrelevant = classifier.isIrrelevant(result);
+  // draft.override is the user insisting a rejected photo really is a hazard.
+  // A model trained on a few hundred images will sometimes be wrong, and
+  // without a way past it a genuine report simply cannot be filed.
+  const irrelevant = classifier.isIrrelevant(result) && !draft.override;
+  const manual = !result.available || draft.override;
   const lowConfidence =
-    result.available && !irrelevant && classifier.willLikelyFlag(result.confidence);
+    result.available && !manual && classifier.willLikelyFlag(result.confidence);
 
   let body;
 
@@ -138,11 +187,12 @@ function showReview(result) {
       </div>
       <div class="actions mt">
         <button class="btn btn-primary" id="retake">Take another photo</button>
+        <button class="btn btn-quiet" id="override">It is a hazard</button>
       </div>`;
-  } else if (result.available) {
+  } else if (!manual) {
     body = `
       <div class="card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div class="row-between">
           <h2>${categoryIcon(draft.category, 22)} ${esc(CATEGORY_LABELS[draft.category])}</h2>
           <span class="pill ${lowConfidence ? 'pill-warn' : 'pill-green'}">
             ${(result.confidence * 100).toFixed(0)}% confident
@@ -156,13 +206,17 @@ function showReview(result) {
           </div>` : ''}
       </div>`;
   } else {
-    // No model configured — say so, and let the user classify manually rather
-    // than inventing a confidence score.
+    // Either no model is configured, or the user is overriding its verdict.
+    // Both submit as a manual classification rather than inventing a score.
     body = `
       <div class="notice">
-        <b>No AI model is configured yet.</b> Add the exported Teachable Machine URL as
-        <code>TM_MODEL_URL</code> to enable automatic classification. For now, choose the
-        category yourself — it will be submitted as a manual classification.
+        ${draft.override
+          ? `<b>Overriding the model.</b> It read this as “${esc(result.label)}”. Pick the
+             category yourself — it will be submitted as a manual classification, so the
+             data never pretends the model made this call.`
+          : `<b>No AI model is configured yet.</b> Add the exported Teachable Machine URL as
+             <code>TM_MODEL_URL</code> to enable automatic classification. For now, choose the
+             category yourself — it will be submitted as a manual classification.`}
       </div>
       <div class="card">
         <h3>What are you reporting?</h3>
@@ -175,23 +229,12 @@ function showReview(result) {
       </div>`;
   }
 
-  const place = draft.position
-    ? `${draft.position.lat.toFixed(4)}, ${draft.position.lng.toFixed(4)}`
-    : null;
-
   render(`
     <div class="preview"><img src="${draft.objectUrl}" alt="Your photo" /></div>
     <div class="mt">${body}</div>
 
     ${irrelevant ? '' : `
-      <div class="card mt">
-        <h3>Location</h3>
-        <p class="small muted mt">
-          ${place
-            ? `${icon('pin', { size: 15 })} ${esc(place)}`
-            : `${icon('alert', { size: 15 })} Location unavailable. EcoSnap needs it to place your report on the map — allow location access and take the photo again.`}
-        </p>
-      </div>
+      ${locationCard()}
 
       <div class="actions mt">
         <button class="btn btn-ghost" id="retake">Retake</button>
@@ -204,6 +247,39 @@ function showReview(result) {
   if (retake) retake.onclick = show;
 
   bindCategoryButtons();
+
+  const override = $('#override');
+  if (override) {
+    override.onclick = () => {
+      draft.override = true;
+      draft.category = null;
+      showReview(result);
+    };
+  }
+
+  const geoRetry = $('#geo-retry');
+  if (geoRetry) {
+    geoRetry.onclick = () =>
+      withBusy(geoRetry, async () => {
+        const position = await getPosition();
+        if (!position) {
+          return toast('Still no location — use the neighborhood centre instead.', 'bad');
+        }
+        draft.position = position;
+        draft.approxLabel = null;
+        showReview(result);
+      });
+  }
+
+  const geoApprox = $('#geo-approx');
+  if (geoApprox) {
+    geoApprox.onclick = () => {
+      const area = fallbackArea();
+      draft.position = config.NEIGHBORHOOD_CENTERS[area] || config.DEFAULT_CENTER;
+      draft.approxLabel = area;
+      showReview(result);
+    };
+  }
 
   const submit = $('#submit');
   if (submit) {
@@ -273,7 +349,7 @@ function showResult(report) {
     </div>
 
     <div class="card">
-      <div class="rank" style="border:none">
+      <div class="rank flush">
         <span class="rank-name">Status</span>
         <span class="pill ${verified ? 'pill-green' : 'pill-warn'}">${esc(report.status)}</span>
       </div>

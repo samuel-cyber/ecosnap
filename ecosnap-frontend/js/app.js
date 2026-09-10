@@ -49,13 +49,24 @@ function setChrome(signedIn) {
 function updatePoints() {
   const user = auth.getUser();
   const el = document.getElementById('points-value');
-  if (user && el) el.textContent = (user.eco_points || 0).toLocaleString();
+  if (!user || !el) return;
+
+  const next = (user.eco_points || 0).toLocaleString();
+  const changed = el.textContent !== next;
+  el.textContent = next;
+  if (!changed) return;
+
+  // Points are earned on one screen and shown on another, so the balance
+  // otherwise changes with nothing to catch the eye.
+  const chip = document.getElementById('points-chip');
+  chip.classList.remove('bumped');
+  void chip.offsetWidth; // reflow, so the animation restarts on a repeat award
+  chip.classList.add('bumped');
 }
 
 function setActiveTab(name) {
   document.querySelectorAll('[data-tab]').forEach((tab) => {
     const current = tab.dataset.tab === name;
-    tab.classList.toggle('active', current);
     // aria-current is what screen readers announce and what the stylesheet
     // targets, so the visual and announced states cannot drift apart.
     if (current) tab.setAttribute('aria-current', 'page');
@@ -97,23 +108,59 @@ function onSignedIn() {
   route();
 }
 
+function showWaking(attempt, total) {
+  document.getElementById('view').innerHTML = `
+    <div class="state">
+      <div class="spinner"></div>
+      <h2>Waking the backend…</h2>
+      <p>Free hosting puts the API to sleep when it's idle. This usually takes
+         under a minute.</p>
+      <p class="small mt">Attempt ${attempt} of ${total}.</p>
+    </div>`;
+}
+
+function showOffline(error) {
+  document.getElementById('view').innerHTML = `
+    <div class="state">
+      <div class="state-icon">${icon('offline', { size: 30 })}</div>
+      <h2>Can't reach the backend</h2>
+      <p>${esc(error.message)}</p>
+      <p class="small mt">Currently pointing at <code>${esc(config.API_BASE_URL)}</code>.</p>
+      <button class="btn btn-primary mt" id="retry-boot">Try again</button>
+    </div>`;
+  document.getElementById('retry-boot').onclick = boot;
+}
+
+/**
+ * One failed ping is not proof the API is down: a sleeping free-tier backend
+ * takes the better part of a minute to wake, and that is exactly when someone
+ * is watching a demo. Retry a few times before giving up, and leave a button
+ * rather than a dead end when we do.
+ */
+async function waitForBackend() {
+  const delays = [2000, 4000, 8000];
+
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await api.ping();
+      return true;
+    } catch (error) {
+      if (attempt >= delays.length) {
+        showOffline(error);
+        return false;
+      }
+      showWaking(attempt + 2, delays.length + 1);
+      await new Promise((resolve) => setTimeout(resolve, delays[attempt]));
+    }
+  }
+}
+
+let wired = false;
+
 async function boot() {
   showSetupBanner();
 
-  // Fail fast and loudly if the backend isn't reachable — section 1.4 of the
-  // report exists precisely because this is the usual first thing to break.
-  try {
-    await api.ping();
-  } catch (error) {
-    document.getElementById('view').innerHTML = `
-      <div class="state">
-        <div class="state-icon">${icon('offline', { size: 30 })}</div>
-        <h2>Can't reach the backend</h2>
-        <p>${esc(error.message)}</p>
-        <p class="small mt">Currently pointing at <code>${esc(config.API_BASE_URL)}</code>.</p>
-      </div>`;
-    return;
-  }
+  if (!(await waitForBackend())) return;
 
   try {
     await auth.restore();
@@ -121,9 +168,12 @@ async function boot() {
     /* an unrestorable session just means signing in again */
   }
 
-  window.addEventListener('hashchange', route);
-  window.addEventListener('ecosnap:user-changed', updatePoints);
-  document.getElementById('points-chip').onclick = () => { location.hash = '#/profile'; };
+  if (!wired) {
+    wired = true;
+    window.addEventListener('hashchange', route);
+    window.addEventListener('ecosnap:user-changed', updatePoints);
+    document.getElementById('points-chip').onclick = () => { location.hash = '#/profile'; };
+  }
 
   route();
 }

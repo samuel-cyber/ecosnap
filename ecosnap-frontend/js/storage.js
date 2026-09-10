@@ -24,6 +24,37 @@ function objectKey(userId, file) {
 }
 
 /**
+ * Phone cameras produce 3-6MB JPEGs, which over a Lagos mobile connection is
+ * comfortably the slowest step in the whole flow. A 1280px long edge is far
+ * more than the classifier or a map thumbnail needs, and cuts the upload to a
+ * fraction of the size. Any failure here returns the original file, because a
+ * slow upload beats a broken one.
+ */
+async function downscale(file, maxEdge = 1280) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1) {
+      bitmap.close();
+      return file;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!blob || blob.size >= file.size) return file;
+
+    return new File([blob], `${file.name.replace(/\.\w+$/, '')}.jpg`, { type: 'image/jpeg' });
+  } catch {
+    return file;
+  }
+}
+
+/**
  * Uploads and returns { url, simulated }.
  *
  * When Supabase is not configured the file cannot be uploaded anywhere, so we
@@ -44,11 +75,12 @@ export async function uploadPhoto(file, userId) {
     };
   }
 
-  const key = objectKey(userId, file);
+  const upload = await downscale(file);
+  const key = objectKey(userId, upload);
 
   const { error } = await sb.storage
     .from(config.SUPABASE_STORAGE_BUCKET)
-    .upload(key, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+    .upload(key, upload, { cacheControl: '3600', upsert: false, contentType: upload.type });
 
   if (error) {
     throw new Error(

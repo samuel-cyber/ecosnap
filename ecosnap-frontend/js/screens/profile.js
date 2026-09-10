@@ -32,8 +32,9 @@ export async function show() {
   let reports = null;
   try {
     reports = await api.getUserReports(cached.id);
-  } catch (error) {
-    if (error.status !== 404) throw error;
+  } catch {
+    // Any failure here just means there is no history to show. Rethrowing
+    // would leave the spinner up for good, hiding the balance already loaded.
   }
 
   const points = user.eco_points || 0;
@@ -79,7 +80,7 @@ export async function show() {
         <a class="btn btn-primary" href="#/capture">Report a hazard</a>
       </div>` : `
       <div class="card mt">
-        <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="row-between">
           <h3>Your reports</h3>
           <span class="small muted">${reports.length} total</span>
         </div>
@@ -107,7 +108,7 @@ export async function show() {
 
     <div class="card mt">
       <h3>How points work</h3>
-      <div class="rank" style="border:none">
+      <div class="rank flush">
         <span class="rank-name small muted">Verified report</span>
         <span class="rank-pts">+10</span>
       </div>

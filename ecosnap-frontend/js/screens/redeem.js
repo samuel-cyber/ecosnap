@@ -65,9 +65,32 @@ export async function show() {
       }).join('')}
     </div>`);
 
+  // Spending points is irreversible and the buttons sit close together, so the
+  // first tap arms and the second commits. It disarms itself, so a stray tap
+  // costs nothing rather than a reward.
   document.querySelectorAll('[data-reward]').forEach((button) => {
-    button.onclick = () =>
-      withBusy(button, async () => {
+    const label = button.textContent.trim();
+    let armed = false;
+    let disarmTimer;
+
+    const disarm = () => {
+      armed = false;
+      clearTimeout(disarmTimer);
+      button.textContent = label;
+      button.classList.remove('btn-confirm');
+    };
+
+    button.onclick = () => {
+      if (!armed) {
+        armed = true;
+        button.textContent = `Spend ${button.dataset.cost}?`;
+        button.classList.add('btn-confirm');
+        disarmTimer = setTimeout(disarm, 4000);
+        return undefined;
+      }
+
+      clearTimeout(disarmTimer);
+      return withBusy(button, async () => {
         await api.redeem({
           userId: user.id,
           pointsSpent: Number(button.dataset.cost),
@@ -75,7 +98,11 @@ export async function show() {
         });
         await auth.refresh();
         showSuccess(button.dataset.reward);
-      }).catch((error) => toast(error.message, 'bad'));
+      }).catch((error) => {
+        disarm();
+        toast(error.message, 'bad');
+      });
+    };
   });
 }
 
