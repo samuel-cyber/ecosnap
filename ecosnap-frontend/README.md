@@ -36,7 +36,7 @@ Copy `config.local.example.js` to `config.local.js` (gitignored) and fill in:
 | `SUPABASE_URL` / `SUPABASE_ANON_KEY` | Real accounts + photo upload | Supabase dashboard → Settings → API |
 | `SUPABASE_STORAGE_BUCKET` | Photo upload | Bucket name, default `reports` |
 | `MAPBOX_TOKEN` | Map pins | Mapbox → Account → Tokens |
-| `TM_MODEL_URL` | AI classification | PM's Teachable Machine export (§2.2) |
+| `TM_MODEL_URL` | AI classification | **Already set.** The trained model ships in `model/`; override only to swap in a retrained one |
 
 **The app runs with none of these set.** A banner at the top names exactly
 what's missing, and each unconfigured piece degrades to something honest
@@ -44,8 +44,14 @@ rather than something fake:
 
 - No Supabase → "Continue as demo user" registers a real backend profile, so
   reports, points and the leaderboard all work end to end.
-- No model → the review screen asks the user to pick the category and submits
-  it labelled `manual:<category>`. **It never invents a confidence score.**
+- The model ships with the app in `model/` (2.2MB, three classes), so
+  classification works out of the box and does not depend on Teachable
+  Machine's hosting staying up mid-demo. If it is ever unset or fails to
+  load, the review screen asks the user to pick the category and submits it
+  labelled `manual:<category>`. **It never invents a confidence score.**
+- If the model calls a real hazard "not a hazard", **It is a hazard** on that
+  screen hands classification back to the user rather than dead-ending the
+  report. It still submits as `manual:<category>`.
 - No Mapbox → the map screen lists the same reports it would have plotted.
 - No Storage → the photo isn't uploaded, and the UI says so plainly.
 
@@ -76,7 +82,7 @@ Set these in **Vercel → Settings → Environment Variables**:
 | `ECOSNAP_SUPABASE_ANON_KEY` | for login | The **anon/publishable** key — never the service_role key |
 | `ECOSNAP_SUPABASE_STORAGE_BUCKET` | no | Defaults to `reports` |
 | `ECOSNAP_MAPBOX_TOKEN` | for map pins | A **public** token (`pk.…`), scoped to your domain |
-| `ECOSNAP_TM_MODEL_URL` | for AI | The Teachable Machine model folder URL |
+| `ECOSNAP_TM_MODEL_URL` | no | Defaults to the bundled `/model`. Set only to point at a hosted retrained model |
 
 Only variables that are actually set get written; the rest fall through to the
 defaults in `js/config.js` rather than being blanked out. Precedence is

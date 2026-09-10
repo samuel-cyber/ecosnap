@@ -164,9 +164,13 @@ function fallbackArea() {
 
 /** The confirm-before-submit screen. */
 function showReview(result) {
-  const irrelevant = classifier.isIrrelevant(result);
+  // draft.override is the user insisting a rejected photo really is a hazard.
+  // A model trained on a few hundred images will sometimes be wrong, and
+  // without a way past it a genuine report simply cannot be filed.
+  const irrelevant = classifier.isIrrelevant(result) && !draft.override;
+  const manual = !result.available || draft.override;
   const lowConfidence =
-    result.available && !irrelevant && classifier.willLikelyFlag(result.confidence);
+    result.available && !manual && classifier.willLikelyFlag(result.confidence);
 
   let body;
 
@@ -183,8 +187,9 @@ function showReview(result) {
       </div>
       <div class="actions mt">
         <button class="btn btn-primary" id="retake">Take another photo</button>
+        <button class="btn btn-quiet" id="override">It is a hazard</button>
       </div>`;
-  } else if (result.available) {
+  } else if (!manual) {
     body = `
       <div class="card">
         <div class="row-between">
@@ -201,13 +206,17 @@ function showReview(result) {
           </div>` : ''}
       </div>`;
   } else {
-    // No model configured — say so, and let the user classify manually rather
-    // than inventing a confidence score.
+    // Either no model is configured, or the user is overriding its verdict.
+    // Both submit as a manual classification rather than inventing a score.
     body = `
       <div class="notice">
-        <b>No AI model is configured yet.</b> Add the exported Teachable Machine URL as
-        <code>TM_MODEL_URL</code> to enable automatic classification. For now, choose the
-        category yourself — it will be submitted as a manual classification.
+        ${draft.override
+          ? `<b>Overriding the model.</b> It read this as “${esc(result.label)}”. Pick the
+             category yourself — it will be submitted as a manual classification, so the
+             data never pretends the model made this call.`
+          : `<b>No AI model is configured yet.</b> Add the exported Teachable Machine URL as
+             <code>TM_MODEL_URL</code> to enable automatic classification. For now, choose the
+             category yourself — it will be submitted as a manual classification.`}
       </div>
       <div class="card">
         <h3>What are you reporting?</h3>
@@ -238,6 +247,15 @@ function showReview(result) {
   if (retake) retake.onclick = show;
 
   bindCategoryButtons();
+
+  const override = $('#override');
+  if (override) {
+    override.onclick = () => {
+      draft.override = true;
+      draft.category = null;
+      showReview(result);
+    };
+  }
 
   const geoRetry = $('#geo-retry');
   if (geoRetry) {

@@ -33,8 +33,18 @@ let loadPromise = null;
 export function normaliseClassName(raw) {
   const key = String(raw || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
 
-  if (['burning', 'burn', 'trash_burning', 'fire'].includes(key)) return 'burning';
-  if (['blocked_drain', 'drain', 'blocked_drains', 'gutter'].includes(key)) return 'blocked_drain';
+  // The explicit "not a hazard" class is tested first, so a label like
+  // "none_irrelevant" can never be caught by a hazard keyword below.
+  if (/(^|_)(none|nothing|other|irrelevant|neither|background|clean)(_|$)/.test(key)) {
+    return 'none';
+  }
+
+  // Keyword match, not an exact list. The trained model names its classes
+  // "burning_refuse" and "blocked_drainages"; an exact list sent both to
+  // "none", which the UI reads as "that isn't a hazard" and blocks every
+  // submission. Matching on the stem survives the next rename too.
+  if (/burn|fire|smoke/.test(key)) return 'burning';
+  if (/drain|gutter|sewer/.test(key)) return 'blocked_drain';
   return 'none';
 }
 
