@@ -35,10 +35,11 @@ let toastTimer;
 export function toast(message, kind = '') {
   const el = document.getElementById('toast');
   el.textContent = message;
-  el.className = `toast ${kind}`;
-  el.hidden = false;
+  // Visibility is a class, not the hidden attribute: display:none cannot be
+  // transitioned, so hidden gave the toast a hard cut in and out.
+  el.className = `toast ${kind} is-visible`;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, 4800);
+  toastTimer = setTimeout(() => { el.classList.remove('is-visible'); }, 4800);
 }
 
 /** Runs an async action with a button showing a spinner while it works. */

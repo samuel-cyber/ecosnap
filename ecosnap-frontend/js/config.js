@@ -35,6 +35,15 @@ const defaults = {
 
   // Fallback map centre: Yaba, Lagos (matches the backend's geoService bounds).
   DEFAULT_CENTER: { lat: 6.5095, lng: 3.3711 },
+
+  // Approximate centres for the neighborhoods the sign-up screen offers. Used
+  // only when the device refuses a GPS fix, so a report can still be filed
+  // rather than the whole flow dead-ending -- the UI labels it as approximate.
+  NEIGHBORHOOD_CENTERS: {
+    Yaba: { lat: 6.5095, lng: 3.3711 },
+    Surulere: { lat: 6.4926, lng: 3.3543 },
+    Ikeja: { lat: 6.6018, lng: 3.3515 },
+  },
 };
 
 const overrides =

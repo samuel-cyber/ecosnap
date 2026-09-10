@@ -12,10 +12,6 @@
  * which is what keeps the interface quiet.
  */
 
-/* Atkinson Hyperlegible: drawn by the Braille Institute so that similar
-   letterforms stay distinguishable at low acuity and in poor conditions. */
-@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
-
 :root {
   /* Ground and ink */
   --ground: #f6f7f4;
@@ -123,6 +119,8 @@ p { margin: 0; max-width: 68ch; }
 .hint  { color: var(--ink-2); font-size: .8125rem; line-height: 1.45; }
 .center { text-align: center; }
 .mt { margin-top: 16px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.flush { border: none; }
 
 /* --- Shell --------------------------------------------------------------- */
 .view {
@@ -245,6 +243,9 @@ p { margin: 0; max-width: 68ch; }
 .btn-quiet { background: var(--surface); color: var(--ink); border-color: var(--rule-strong); }
 
 .btn-ghost { background: transparent; color: var(--ink-2); border-color: transparent; }
+
+/* Armed state for a spend that cannot be undone. */
+.btn-confirm { background: var(--burning); color: #fff; border-color: var(--burning); }
 
 .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .actions .btn { flex: 1 1 auto; }
@@ -454,15 +455,33 @@ code { overflow-wrap: anywhere; }
 
 /* --- Feedback ------------------------------------------------------------ */
 .toast {
-  position: fixed; left: 50%; transform: translateX(-50%);
+  position: fixed; left: 50%;
   bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 14px);
   z-index: 60; max-width: min(440px, calc(100vw - 32px));
   padding: 11px 16px; border-radius: var(--r);
   background: var(--ink); color: #fff; font-size: .875rem; font-weight: 400;
   box-shadow: var(--lift-lg);
-  animation: rise .22s var(--ease-out) both;
+  pointer-events: none;
+
+  /* A transition, not a keyframe. A second toast can arrive while the first is
+     still up, and a transition retargets from wherever the element currently
+     is; a keyframe would restart from zero or, worse, not replay at all.
+     visibility is delayed out so the exit is seen before it leaves the tree. */
+  transform: translate(-50%, 8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--t-ui) var(--ease-out),
+              transform var(--t-ui) var(--ease-out),
+              visibility 0s linear var(--t-ui);
 }
-@keyframes rise { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Leaves the way it arrived: down and out, the same distance it came up. */
+.toast.is-visible {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
 
 .spinner {
   width: 18px; height: 18px; flex: none;
@@ -549,6 +568,17 @@ code { overflow-wrap: anywhere; }
 .btn, .cat-btn, .capture-drop, .points-chip { transition-duration: var(--t-press); }
 .btn, .cat-btn, .capture-drop, .points-chip { transition-timing-function: var(--ease-out); }
 
+/* The header balance is the one number that changes behind the user's back --
+   a report is submitted on another screen and the chip silently updates. A
+   single bump ties the reward to the place it landed. Fires only on an actual
+   change, never on first paint. */
+@keyframes points-bump {
+  0%   { transform: none; }
+  38%  { transform: scale(1.13); }
+  100% { transform: none; }
+}
+.points-chip.bumped { animation: points-bump 420ms var(--ease-out); }
+
 /* The success moment. The mark lands, then the number — sequenced so the
    result is read before the reward. This is the app's rare tier; nothing
    else gets this budget. */
@@ -573,4 +603,14 @@ code { overflow-wrap: anywhere; }
   .capture-drop:active,
   .points-chip:active { transform: none; }
   .pred-bar > span { transition: none; }
+
+  /* The toast still announces itself, it just stops travelling to do it. */
+  .toast, .toast.is-visible { transform: translate(-50%, 0); }
+  .toast {
+    transition: opacity var(--t-ui) var(--ease-out),
+                visibility 0s linear var(--t-ui);
+  }
+
+  /* The balance changing is itself the signal; the bump is only movement. */
+  .points-chip.bumped { animation: none; }
 }
