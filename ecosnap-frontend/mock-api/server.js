@@ -212,7 +212,8 @@ async function api(req, res, pathname, query) {
     return send(res, 200,
       rows
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .map(({ id, lat, lng, category, created_at }) => ({ id, lat, lng, category, created_at }))
+        .map(({ id, lat, lng, category, neighborhood, created_at }) =>
+          ({ id, lat, lng, category, neighborhood, created_at }))
     );
   }
 

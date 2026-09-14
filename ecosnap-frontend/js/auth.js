@@ -31,6 +31,21 @@ function client() {
   return supabase;
 }
 
+/**
+ * Hand the API layer a way to read the current access token. Guarded at every
+ * step: with no Supabase configured there is no token, and the request goes
+ * out exactly as it does today.
+ */
+api.setTokenProvider(async () => {
+  try {
+    if (!hasSupabase() || !window.supabase) return null;
+    const { data } = await client().auth.getSession();
+    return (data && data.session && data.session.access_token) || null;
+  } catch {
+    return null;
+  }
+});
+
 export const getUser = () => currentUser;
 export const isSignedIn = () => Boolean(currentUser);
 

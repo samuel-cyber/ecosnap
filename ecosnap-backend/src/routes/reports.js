@@ -98,7 +98,7 @@ router.get("/", async (req, res, next) => {
 
     let query = supabase
       .from("reports")
-      .select("id, lat, lng, category, created_at")
+      .select("id, lat, lng, category, neighborhood, created_at")
       .eq("status", "verified");
 
     // Apply bounding box if all four values are provided
