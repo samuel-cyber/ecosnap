@@ -384,17 +384,40 @@ select {
 
 /* --- Map ----------------------------------------------------------------- */
 .map-shell {
+  position: relative;
   height: min(58vh, 460px);
   border-radius: var(--r-lg); overflow: hidden;
   border: 1px solid var(--rule); background: var(--sunken);
 }
+
+/* The map container carried no size of its own. Mapbox measures the element
+   it is handed, so it initialised against a zero-height box and drew nothing:
+   a grey panel where the map belonged. */
+#map { position: absolute; inset: 0; }
+
 .map-fallback { padding: 0; }
 /* No token, no map: the shell stops constraining and gets out of the way. */
 .map-shell.is-list {
   height: auto; overflow: visible;
   border: 0; background: none; border-radius: 0;
 }
-.map-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; }
+.map-shell.is-list #map { position: static; }
+.map-shell.is-list .map-legend { display: none; }
+
+/* The key belongs over the map, not stacked under it -- inside a shell that
+   clips, a block-flow legend was pushed out of sight entirely. Blur here is
+   doing real work: it keeps the labels legible over whatever tiles land
+   behind them. */
+.map-legend {
+  position: absolute; z-index: 2;
+  left: 10px; bottom: 10px;
+  display: flex; gap: 13px; flex-wrap: wrap;
+  padding: 7px 12px; border-radius: 99px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--lift);
+}
 .legend-row { display: inline-flex; align-items: center; gap: 6px; font-size: .8125rem; color: var(--ink-2); }
 .dot { width: 9px; height: 9px; border-radius: 99px; display: inline-block; }
 .dot.burning { background: var(--burning); }
@@ -405,9 +428,30 @@ select {
   width: 28px; height: 28px; border-radius: 99px;
   background: var(--surface); box-shadow: var(--lift);
   border: 1.5px solid currentColor;
+  cursor: pointer;
 }
 .marker.burning { color: var(--burning); }
 .marker.blocked_drain { color: var(--drain); }
+
+/* Mapbox's popup and controls ship with their own type and chrome. They are
+   showing our content, so they carry our design. The tip needs no override:
+   its default white already matches --surface. */
+.mapboxgl-popup-content {
+  padding: 9px 13px;
+  border-radius: var(--r);
+  box-shadow: var(--lift-lg);
+  font-family: inherit;
+  display: grid;
+  gap: 1px;
+}
+.popup-title { font-size: .875rem; font-weight: 700; color: var(--ink); }
+.popup-meta { font-size: .75rem; color: var(--ink-2); }
+
+.mapboxgl-ctrl-group {
+  border-radius: var(--r) !important;
+  box-shadow: var(--lift) !important;
+  overflow: hidden;
+}
 
 /* --- Rewards ------------------------------------------------------------- */
 .reward {
@@ -591,6 +635,26 @@ code { overflow-wrap: anywhere; }
   to   { opacity: 1; transform: none; }
 }
 
+/* The map goes from empty grey panel to full tiles in a single cut, and the
+   tiles decide when. Tied to Mapbox's own load event rather than a guessed
+   delay, so it fades exactly when there is something to show. */
+#map { opacity: 0; transition: opacity var(--t-enter) var(--ease-out); }
+#map.is-ready { opacity: 1; }
+
+/* Pins land in sequence. Reading a map is spatial, and an order tells you
+   roughly how many there are before you have counted. backwards, not both:
+   the fill must release the transform afterwards or the press below can
+   never take effect. Delay is set per pin in map.js, and capped there. */
+@keyframes pin-land {
+  from { opacity: 0; transform: translateY(-7px) scale(.72); }
+  to   { opacity: 1; transform: none; }
+}
+.marker {
+  animation: pin-land 340ms var(--ease-out) var(--pin-delay, 0ms) backwards;
+  transition: transform var(--t-press) var(--ease-out);
+}
+.marker:active { transform: scale(.9); }
+
 @media (prefers-reduced-motion: reduce) {
   /* Reduced motion means less movement, not a dead interface: the fades that
      signal a change survive, the travel and scaling do not. */
@@ -613,4 +677,10 @@ code { overflow-wrap: anywhere; }
 
   /* The balance changing is itself the signal; the bump is only movement. */
   .points-chip.bumped { animation: none; }
+
+  /* The map still fades up -- that is opacity, and it is what stops the cut.
+     The pins stop travelling and simply appear, all at once. */
+  @keyframes pin-land { from { opacity: 0; } to { opacity: 1; } }
+  .marker { animation-delay: 0ms !important; }
+  .marker:active { transform: none; }
 }
