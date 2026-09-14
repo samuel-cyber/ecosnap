@@ -76,7 +76,10 @@ export const CATEGORY_LABELS = {
  */
 export const categoryIcon = (category, size = 20) => {
   const name = category === 'burning' ? 'flame' : category === 'blocked_drain' ? 'drain' : 'pin';
-  return `<span class="cat cat-${category || 'unknown'}">${icon(name, { size })}</span>`;
+  // Escaped because this lands in an attribute and the value comes from the
+  // API. The backend validates category on insert, but with row-level security
+  // still off a row can be written around it -- so don't rely on that here.
+  return `<span class="cat cat-${esc(category || 'unknown')}">${icon(name, { size })}</span>`;
 };
 
 /**
